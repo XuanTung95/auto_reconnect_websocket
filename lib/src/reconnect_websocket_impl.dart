@@ -25,17 +25,16 @@ class AutoReconnectWebSocket extends ValueNotifier<ConnectionState> {
   AutoReconnectWebSocket({required this.url, required this.onClose, required this.onConnectError})
       : super(ConnectionState.disconnected);
 
-  Future _connectInternal() async {
+  Future<bool> _connectInternal() async {
     assert(_wsChannel == null && _subscription == null && url.isNotEmpty);
     try {
       value = ConnectionState.connecting;
       final ws = await WebSocket.connect(url);
-      value = ConnectionState.connected;
       _log('Connected to WebSocket: $url');
       _wsChannel = IOWebSocketChannel(ws);
       _subscription = _wsChannel!.stream.listen(
             (dynamic message) {
-          // send message to out stream
+          // forward message to out stream
           _log('ws data: $message');
           _innerStream.add(message);
         },
@@ -52,6 +51,8 @@ class AutoReconnectWebSocket extends ValueNotifier<ConnectionState> {
           _log('ws error $error');
         },
       );
+      value = ConnectionState.connected;
+      return true;
     } catch (e) {
       _log('Create new WebSocket connection error: $e');
       value = ConnectionState.disconnected;
@@ -59,9 +60,11 @@ class AutoReconnectWebSocket extends ValueNotifier<ConnectionState> {
       final _reconnect = await onConnectError(e);
       if (_reconnect) {
         _log("Reconnecting...");
-        reconnect();
+        final ret = await reconnect();
+        return ret;
       }
     }
+    return false;
   }
 
   void _releaseConnection() {
@@ -76,12 +79,14 @@ class AutoReconnectWebSocket extends ValueNotifier<ConnectionState> {
     return reconnect();
   }
 
-  Future reconnect() async {
+  Future<bool> reconnect() async {
     _releaseConnection();
     return _connectInternal();
   }
 
-  void release() {
+  @override
+  void dispose() {
+    super.dispose();
     _releaseConnection();
     _innerStream.close();
     _released = true;
