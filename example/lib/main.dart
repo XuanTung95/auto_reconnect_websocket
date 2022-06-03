@@ -32,35 +32,35 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
-  final AutoReconnectWebSocket socket = AutoReconnectWebSocket(url: 'wss://demo.piesocket.com/v3/channel_1?api_key=VCXCEuvhGcBDP7XhiJJUDvR1e1D3eiVjgZ9VRiaV&notify_self', onClose: () async {
-    await Future.delayed(Duration(seconds: 5));
-    return true;
-  }, onConnectError: (e) async {
-    await Future.delayed(Duration(seconds: 5));
-    return true;
-  });
+  dynamic? lastMessage;
+  final AutoReconnectWebSocket socket = AutoReconnectWebSocket(
+      url:
+          'wss://demo.piesocket.com/v3/channel_1?api_key=VCXCEuvhGcBDP7XhiJJUDvR1e1D3eiVjgZ9VRiaV&notify_self',
+      onClosed: (e) async {
+        await Future.delayed(const Duration(seconds: 5));
+        return true;
+      });
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     socket.connect();
-    socket.stream.listen((event) {
-      print("MESSAGE: $event");
+    socket.stream.listen((msg) {
+      print("MESSAGE: $msg");
+      setState(() {
+        lastMessage = msg;
+      });
     });
     WidgetsBinding.instance?.addPostFrameCallback((timeStamp) {
-      socket.addListener(() {
-        setState(() {
-        });
+      socket.stateChangeListeners.add((state) {
+        setState(() {});
       });
     });
   }
 
   void _incrementCounter() {
+    _counter++;
     socket.sink?.add('test $_counter');
-    setState(() {
-      _counter++;
-    });
   }
 
   @override
@@ -74,14 +74,13 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             Text(
-              'Connection State: ${socket.value}',
-            ),
-            const Text(
-              'You have pushed the button this many times:',
+              'Connection State: ${socket.state}',
             ),
             Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
+              'LastMessage: $lastMessage',
+            ),
+            const Text(
+              'Test Url: https://www.piesocket.com/websocket-tester',
             ),
           ],
         ),
