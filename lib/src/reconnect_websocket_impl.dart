@@ -6,8 +6,9 @@ import 'package:web_socket_channel/io.dart';
 
 class AutoReconnectWebSocket {
 
-  AutoReconnectWebSocket({required this.url, required this.onClosed,});
+  AutoReconnectWebSocket({required this.url, required this.onClosed, this.headers});
 
+  Map<String, dynamic>? headers;
   /// current WebSocket channel
   IOWebSocketChannel? _wsChannel;
   final String url;
@@ -40,7 +41,7 @@ class AutoReconnectWebSocket {
     assert(_wsChannel == null && _subscription == null && url.isNotEmpty);
     try {
       _setState(ConnectionState.connecting);
-      final ws = await WebSocket.connect(url);
+      final ws = await WebSocket.connect(url, headers: headers);
       _log('Connected to WebSocket: $url');
       _wsChannel = IOWebSocketChannel(ws);
       _subscription = _wsChannel!.stream.listen(
